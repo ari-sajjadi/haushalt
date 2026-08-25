@@ -1,0 +1,26 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env: { POSTGRES_DB: haushalt, POSTGRES_USER: haushalt, POSTGRES_PASSWORD: haushalt }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U haushalt" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://haushalt:haushalt@localhost:5432/haushalt?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx prisma validate
+      - run: npm run lint
+      - run: npm run test:unit
+      - run: npm run build

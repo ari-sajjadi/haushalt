@@ -1,0 +1,157 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" }
+
+enum HouseholdRole { OWNER ADMIN MEMBER }
+enum ExpenseStatus { DRAFT OPEN PAID OVERDUE CANCELLED }
+enum SplitMethod { EQUAL PERCENTAGE FIXED SHARES }
+enum RecurrenceFrequency { WEEKLY MONTHLY QUARTERLY SEMIANNUAL YEARLY CUSTOM }
+
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  name String
+  passwordHash String?
+  memberships HouseholdMember[]
+  paidExpenses Expense[] @relation("Payer")
+  splits ExpenseSplit[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Household {
+  id String @id @default(cuid())
+  name String
+  currency String @default("CHF") @db.Char(3)
+  locale String @default("de-CH")
+  members HouseholdMember[]
+  categories Category[]
+  expenses Expense[]
+  budgets Budget[]
+  invitations Invitation[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+}
+
+model HouseholdMember {
+  householdId String
+  userId String
+  role HouseholdRole @default(MEMBER)
+  joinedAt DateTime @default(now())
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([householdId, userId])
+  @@index([userId])
+}
+
+model Invitation {
+  id String @id @default(cuid())
+  householdId String
+  email String
+  tokenHash String @unique
+  role HouseholdRole @default(MEMBER)
+  expiresAt DateTime
+  acceptedAt DateTime?
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  @@index([householdId, email])
+}
+
+model Category {
+  id String @id @default(cuid())
+  householdId String
+  name String
+  icon String?
+  color String?
+  isSystem Boolean @default(false)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+  budgets Budget[]
+  @@unique([householdId, name])
+}
+
+model Budget {
+  id String @id @default(cuid())
+  householdId String
+  categoryId String?
+  month DateTime @db.Date
+  amount Decimal @db.Decimal(14, 2)
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  @@unique([householdId, categoryId, month])
+  @@index([householdId, month])
+}
+
+model Expense {
+  id String @id @default(cuid())
+  householdId String
+  categoryId String?
+  payerId String
+  title String
+  vendor String?
+  amount Decimal @db.Decimal(14, 2)
+  currency String @default("CHF") @db.Char(3)
+  dueDate DateTime @db.Date
+  paidAt DateTime?
+  status ExpenseStatus @default(OPEN)
+  splitMethod SplitMethod @default(EQUAL)
+  notes String?
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  payer User @relation("Payer", fields: [payerId], references: [id])
+  splits ExpenseSplit[]
+  recurrence RecurringExpense?
+  attachments Attachment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  @@index([householdId, dueDate])
+  @@index([householdId, status])
+}
+
+model ExpenseSplit {
+  expenseId String
+  userId String
+  amount Decimal @db.Decimal(14, 2)
+  percentage Decimal? @db.Decimal(7, 4)
+  shares Int?
+  settledAt DateTime?
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+  @@id([expenseId, userId])
+  @@index([userId, settledAt])
+}
+
+model RecurringExpense {
+  id String @id @default(cuid())
+  sourceExpenseId String @unique
+  frequency RecurrenceFrequency
+  interval Int @default(1)
+  nextRunAt DateTime
+  endsAt DateTime?
+  active Boolean @default(true)
+  sourceExpense Expense @relation(fields: [sourceExpenseId], references: [id], onDelete: Cascade)
+  @@index([active, nextRunAt])
+}
+
+model Attachment {
+  id String @id @default(cuid())
+  expenseId String
+  objectKey String @unique
+  fileName String
+  mimeType String
+  sizeBytes Int
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+  householdId String
+  actorId String?
+  action String
+  entityType String
+  entityId String
+  metadata Json?
+  createdAt DateTime @default(now())
+  @@index([householdId, createdAt])
+}
