@@ -1,10 +1,40 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql" }
+generator client {
+  provider = "prisma-client-js"
+}
 
-enum HouseholdRole { OWNER ADMIN MEMBER }
-enum ExpenseStatus { DRAFT OPEN PAID OVERDUE CANCELLED }
-enum SplitMethod { EQUAL PERCENTAGE FIXED SHARES }
-enum RecurrenceFrequency { WEEKLY MONTHLY QUARTERLY SEMIANNUAL YEARLY CUSTOM }
+datasource db {
+  provider = "postgresql"
+}
+
+enum HouseholdRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ExpenseStatus {
+  DRAFT
+  OPEN
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum SplitMethod {
+  EQUAL
+  PERCENTAGE
+  FIXED
+  SHARES
+}
+
+enum RecurrenceFrequency {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  YEARLY
+  CUSTOM
+}
 
 model User {
   id String @id @default(cuid())
