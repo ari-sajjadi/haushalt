@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./features.css";
+import "./button-fixes.css";
 
 export const metadata: Metadata = {
   title: "HausHalt – Gemeinsam den Überblick behalten",
